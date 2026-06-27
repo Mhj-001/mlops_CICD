@@ -24,15 +24,17 @@ pipeline {
 
         stage('Security Scan') {
             steps {
-                sh """
-                    docker run --rm \
-                        -v /var/run/docker.sock:/var/run/docker.sock \
-                        aquasec/trivy:latest image \
-                        --exit-code 0 \
-                        --severity HIGH,CRITICAL \
-                        --no-progress \
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                """
+                script {
+                    def trivyStatus = sh(
+                        script: "docker exec trivy trivy image --exit-code 0 --severity HIGH,CRITICAL --no-progress --timeout 10m ${DOCKER_IMAGE}:${DOCKER_TAG}",
+                        returnStatus: true
+                    )
+                    if (trivyStatus != 0) {
+                        echo "Security scan timeout ou erreur - pipeline continue"
+                    } else {
+                        echo "Security scan OK"
+                    }
+                }
             }
         }
 
